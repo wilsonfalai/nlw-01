@@ -52,6 +52,7 @@ const Points = () => {
         }).then(response => {
             setPoints(response.data);
         })
+        
         console.log('sdf');
     }, [selectedItems]);
 
