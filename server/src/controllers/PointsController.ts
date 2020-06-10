@@ -8,25 +8,32 @@ class PointsController {
 
         const parsedItems = String(items).split(',').map(item => Number(item.trim()));
 
-        const points = knex('points')
+        const points = await knex('points')
         .join('point_items','points.id','=','point_items.point_id')
         .whereIn('point_items.item_id',parsedItems)
-        //.where('city',String(city))
-        //.where('uf',String(uf))
+        .where('city',String(city))
+        .where('uf',String(uf))
         .distinct()
         .select('points.*')
         //.where('city','like',String(city));
 
-        if(city){
-            points.where('city',String(city))
-        }
+        // if(city){
+        //     points.where('city',String(city))
+        // }
 
-        if(uf){
-            points.where('uf',String(uf))
-        }
+        // if(uf){
+        //     points.where('uf',String(uf))
+        // }
+
+        const serializedPoints = points.map(point => {
+            return {
+            ...point,
+            image_url: `http://192.168.1.28:3333/uploads/${point.image}`  
+            };
+        });
 
 
-        return response.json(await points);
+        return response.json(serializedPoints);
     }
 
     async show(request: Request, response: Response){
@@ -39,6 +46,11 @@ class PointsController {
             return response.status(400).json({message: 'Point not found' });
         }
 
+        const serializedPoint = {
+            ...point,
+            image_url: `http://192.168.1.28:3333/uploads/${point.image}`           
+        };
+
         /**
          * SELECT * from items
          * JOIN point_items on items.id = point_items.item_id
@@ -50,7 +62,7 @@ class PointsController {
         .select('items.title','items.image')//comenta se quiser todos os valores
 
 
-        return response.json({point,items});
+        return response.json({ point: serializedPoint,items});
 
     } 
 
@@ -69,7 +81,7 @@ class PointsController {
         const trx = await knex.transaction();
 
         const point = {
-            image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?ixlib=rb-1.2.1&ixid=eyJhcHBfaWQiOjEyMDd9&auto=format&fit=crop&w=400&q=60',
+            image: request.file.filename,
             name,
             email,
             whatsapp,
@@ -83,7 +95,10 @@ class PointsController {
     
         const point_id = ids[0];
     
-        const pointItems = items.map((item_id: number) => {
+        const pointItems = items
+            .split(',')
+            .map((item:string) => Number(item.trim()))
+            .map((item_id: number) => {
             return {
                 item_id,
                 point_id //short sintaxe com a const point_id definida acima
